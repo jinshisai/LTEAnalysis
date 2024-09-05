@@ -41,8 +41,24 @@ path_to_library = path_to_here[:-11]
 
 class LTEAnalysis():
 
-    def __init__(self):
+    def __init__(self, molecules):
+        '''
+        Python class for Local Thermal Equilibrium (LTE) analysis.
+
+        Args
+        ----
+        molecules (str or list or tuple): molecule(s) to be analized.
+        '''
         self.moldata = {}
+
+        if (type(molecules) == list) or (type(molecules) == tuple):
+            for mol in molecules:
+                self.read_lamda_moldata(mol)
+        elif type(molecules) == str:
+            self.read_lamda_moldata(molecules)
+        else:
+            print('ERROR\tLTEAnalysis: molecules must be str, or list or tuple of strings.')
+
 
     # read molecular data
     def read_lamda_moldata(self, line):
