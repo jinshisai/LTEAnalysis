@@ -134,6 +134,36 @@ class LTEAnalysis():
 
         #return line, weight, nlevels, EJ, gJ, J, ntrans, Jup, Acoeff, freq, delE
 
+
+    def to_tau(self, Ntot, Tex, delv):
+        '''
+        Calculate tau from given the total column density, excited temeprature 
+         and linewidth.
+
+        Parameters
+        ----------
+         Ntot (array or float): The total number column density of the molecule (cm^-2).
+         Tex (array or float): The excitation temperature (K).
+         delv (array or float): The linewidth (km/s).
+        '''
+        # line Ju --> Jl
+        freq_ul = self.moldata[line]['freq'][Ju-1] * 1e9 # Hz
+        Aul     = self.moldata[line]['Acoeff'][Ju-1]
+        gu      = self.moldata[line]['gJ'][Ju]
+        gl      = self.moldata[line]['gJ'][Ju-1]
+        Eu     = self.moldata[line]['EJ'][Ju]
+        El     = self.moldata[line]['EJ'][Ju-1]
+        #EJu     = self.moldata[line]['Eu'][Ju - 1]
+        #print(Ju, EJu)
+
+        # partition function
+        Qrot = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'], 
+            self.moldata[line]['J'], Tex)
+
+        return (clight*clight*clight)/(8.*np.pi*freq_ul*freq_ul*freq_ul)*(gu/Qrot)\
+        *np.exp(-Eu/Tex)*Ntot*Aul*(np.exp(hp*freq_ul/(kb*Tex)) - 1.) / delv
+
+
     def get_intensity(self, line, Ju, Tex, Ncol, delv, lineprof='gauss', 
         mode='lte', Xconv=None, Tbg=2.73, Tb=True, return_tau=False):
         '''
