@@ -144,7 +144,7 @@ class LTEAnalysis():
         ----------
          Ntot (array or float): The total number column density of the molecule (cm^-2).
          Tex (array or float): The excitation temperature (K).
-         delv (array or float): The linewidth (km/s).
+         delv (array or float): The linewidth (cm/s).
         '''
         # line Ju --> Jl
         freq_ul = self.moldata[line]['freq'][Ju-1] * 1e9 # Hz
@@ -246,7 +246,16 @@ class LTEAnalysis():
 
 
     def get_ltemass(self, line, Fv, Ju, Tex, Xconv,
-        dist=140., mu=2.8, S_TA=None, bmaj=None, bmin=None):
+        dist=140., mu=2.8, Tbg = 2.73, 
+        S_TA=None, bmaj=None, bmin=None, funit = 'Jy',
+        dx = None, dy = None):
+        '''
+        Calculate LTE mass
+
+        Parameters
+        ----------
+         line (str): Name of the molecule.
+        '''
         # line
         if line in self.moldata.keys():
             pass
@@ -259,17 +268,28 @@ class LTEAnalysis():
         gu      = self.moldata[line]['gJ'][Ju]
         gl      = self.moldata[line]['gJ'][Ju-1]
         EJu     = self.moldata[line]['EJ'][Ju]
+        #print(Aul, freq_ul, Ju, gu, gl)
 
         # partition function
         Qrot = Pfunc(self.moldata[line]['EJ'], self.moldata[line]['gJ'], 
             self.moldata[line]['J'], Tex)
+        #print('Qrot %.2f'%Qrot)
+        print('Tex %.2f K'%Tex)
+        #Qrot = 5.7
 
-        # !!! start !!!
-        dist_pc = dist * pc # pc --> cm
-        C1 = Qrot * (4. * np.pi * mu * mp)/(hp * clight * gu * Aul)
+        # coefficients
+        #C1 = Qrot * (4. * np.pi * mu * mp)/(hp * clight * gu * Aul)
+        # more precisely
+        dJv = Bv(Tex, freq_ul) - Bv(Tbg, freq_ul) # cgs
+        c1        = 8. * np.pi * freq_ul**3. * Qrot
+        c2        = clight * clight * clight * gu * Aul
+        exp       = np.exp(EJu/Tex)
+        exp2      = np.exp(hp * freq_ul / (kb * Tex)) - 1.
 
         # observed flux
-        if S_TA:
+        #if S_TA:
+        if (funit == 'K') | (funit == 'Kelvin'):
+            '''
             if bmaj == None:
                 print ('ERROR\tLTEmass: bmaj and bmin must be given\
                  for conversion from K arcsec2 km/s --> Jy km/s.')
@@ -280,20 +300,30 @@ class LTEAnalysis():
                 return
 
             # convert units
-            bmaj = bmaj*np.pi/(180.*60.*60.) # arcsec --> radian
-            bmin = bmin*np.pi/(180.*60.*60.) # arcsec --> radian
+            #bmaj = bmaj*np.pi/(180.*60.*60.) # arcsec --> radian
+            #bmin = bmin*np.pi/(180.*60.*60.) # arcsec --> radian
             Fv       = Fv*S_TA                         # K arcsec2 km/s --> Jy/beam arcesc2 km/s
             beamsize = np.pi/(4.*np.log(2.))*bmaj*bmin # beam --> arcsec2
             Fv       = Fv/beamsize                     # --> Jy km/s
-
-
-        # From Jy km/s to cgs
-        Fv = Fv*1.0e-26         # Jy km/s --> MKS (1 Jy = 10^-26 Wm-2Hz-1)
-        Fv = Fv*1.e7*1.e5*1.e-4 # mks --> cgs (erg cm^-2 cm/s)
+            '''
+            #if (dx is None) | (dy is None):
+            #    print ('ERROR\tLTEmass: dx and dy must be given\
+            #     for conversion from K arcsec2 --> to flux.')
+            #    return
+            dJv *= clight * clight * 0.5 / freq_ul / freq_ul / kb # intensity to equivalent brightness temperature
+            dA_D = dist * dist * au * au # arcsec^2 --> cm^2
+            Fv *= 1.e5 # km/s --> cm/s
+        else:
+            dA_D = dist * dist * pc * pc # cm^2
+            # From Jy km/s to cgs
+            Fv = Fv*1.0e-26         # Jy km/s --> MKS (1 Jy = 10^-26 Wm-2Hz-1)
+            Fv = Fv*1.e7*1.e5*1.e-4 # mks --> cgs (erg cm^-2 cm/s)
 
         # Mgas (assuming optically thin)
-        Mgas = C1 * np.exp(EJu/Tex) * dist_pc * dist_pc * Fv/Xconv # g
+        #Mgas = C1 * np.exp(EJu/Tex) * dist_pc * dist_pc * Fv/Xconv # g
+        Mgas = Fv * c1 / c2 * exp / exp2 / dJv * dA_D * mu * mp / Xconv
         Mgas = Mgas / ms # g --> Msun
+
         print ('Mgas: %.4f Msun'%Mgas)
 
         return Mgas
@@ -350,7 +380,7 @@ class LTEAnalysis():
 
         # !!! start !!!
         dist_pc = dist * pc # pc --> cm
-        C1 = Qrot * (4. * np.pi * mu * mp)/(hp * clight * gu * Aul)
+        #C1 = Qrot * (4. * np.pi * mu * mp)/(hp * clight * gu * Aul)
 
         # convert units
         bmaj = bmaj*np.pi/(180.*60.*60.) # arcsec --> radian

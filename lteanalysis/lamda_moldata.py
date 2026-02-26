@@ -120,7 +120,7 @@ class MolData():
         return trans, freq, Aul, gu, gl, Eu, El
 
 
-    def Pfunc_grid(self, Tmin, Tmax, ngrid, scale = 'linear'):
+    def partfunc_grid(self, Tmin, Tmax, ngrid, scale = 'linear'):
         '''
         Make a grid for the partition function.
 
@@ -141,5 +141,23 @@ class MolData():
 
         self.PFgrid = np.array([
             np.sum(
-            np.array([gJ[j]*np.exp(-EJ[j]/Tex) for j in range(len(J))])
+            np.array([self.gJ[j]*np.exp(-self.EJ[j]/Tex) for j in range(len(self.J))])
             ) for Tex in Tgrid ])
+
+
+def Molecule():
+
+
+    def __init(self, molecules):
+        self.moldata = {}
+
+        if (type(molecules) == list) or (type(molecules) == tuple):
+            for mol in molecules:
+                self.moldata[mol.lower()] = MolData(mol)
+        elif type(molecules) == str:
+            self.moldata[molecules.lower()] = MolData(molecules)
+        else:
+            print('ERROR\tLTEAnalysis: molecules must be str, or list or tuple of strings.')
+
+
+    def get_tau(self, line, Ju):
